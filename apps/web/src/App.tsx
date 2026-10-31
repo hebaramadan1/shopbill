@@ -6,19 +6,22 @@ import { ProductsPage } from './pages/ProductsPage';
 import { LedgersPage } from './pages/LedgersPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { StockImportPage } from './pages/StockImportPage';
+import { GstRegisterPage } from './pages/GstRegisterPage';
+import { BankReconciliationPage } from './pages/BankReconciliationPage';
+import { FinancialChatbotPage } from './pages/FinancialChatbotPage'; // 👈 استدعاء شاشة الشات بوت المالي
 import { db } from './db';
 import { seedDemoData } from './db/demoData';
 import { SupportedLanguage } from '@shopbill/i18n';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<NavTab>('pos');
+  const [activeTab, setActiveTab] = useState<any>('pos');
   const [currentLang, setCurrentLang] = useState<SupportedLanguage>('en');
   const [shopProfile, setShopProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadProfile = async () => {
     try {
-      // Request persistent storage (TR-CLI-3)
       if (navigator.storage && navigator.storage.persist) {
         navigator.storage.persist().catch(() => {});
       }
@@ -32,7 +35,6 @@ export const App: React.FC = () => {
       } else {
         const wasCleared = localStorage.getItem('shopbill_demo_cleared');
         if (!wasCleared) {
-          // Auto-seed demo on first launch so user immediately sees a working app
           await seedDemoData();
           const seededMeta = await db.meta.get('shop_profile');
           if (seededMeta && seededMeta.value) {
@@ -58,7 +60,6 @@ export const App: React.FC = () => {
     loadProfile();
   }, []);
 
-  // Global F1-F5 Navigation Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'F1') {
@@ -76,6 +77,18 @@ export const App: React.FC = () => {
       } else if (e.key === 'F5') {
         e.preventDefault();
         setActiveTab('settings');
+      } else if (e.key === 'F6') {
+        e.preventDefault();
+        setActiveTab('stock-import');
+      } else if (e.key === 'F7') {
+        e.preventDefault();
+        setActiveTab('gst-register');
+      } else if (e.key === 'F8') {
+        e.preventDefault();
+        setActiveTab('bank-rec');
+      } else if (e.key === 'F9') { // 👈 اختصار F9 للشات بوت المالي
+        e.preventDefault();
+        setActiveTab('financial-chat');
       }
     };
 
@@ -97,7 +110,6 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-canvas text-slate-900">
-      {/* Top Header */}
       <Header
         currentLang={currentLang}
         onLanguageChange={(l) => {
@@ -113,9 +125,8 @@ export const App: React.FC = () => {
         onReloadData={loadProfile}
       />
 
-      {/* Main Workspace with Sidebar Rail and Content Page */}
       <div className="flex-1 flex overflow-hidden">
-        <Sidebar activeTab={activeTab} onSelectTab={setActiveTab} lang={currentLang} />
+        <Sidebar activeTab={activeTab as NavTab} onSelectTab={(tab) => setActiveTab(tab)} lang={currentLang} />
 
         <main className="flex-1 flex flex-col overflow-hidden pb-16 md:pb-0">
           {activeTab === 'pos' && <PosPage shopProfile={shopProfile} />}
@@ -125,6 +136,10 @@ export const App: React.FC = () => {
           {activeTab === 'settings' && (
             <SettingsPage shopProfile={shopProfile} onUpdateShopProfile={setShopProfile} />
           )}
+          {activeTab === 'stock-import' && <StockImportPage />}
+          {activeTab === 'gst-register' && <GstRegisterPage />}
+          {activeTab === 'bank-rec' && <BankReconciliationPage />}
+          {activeTab === 'financial-chat' && <FinancialChatbotPage />}
         </main>
       </div>
     </div>

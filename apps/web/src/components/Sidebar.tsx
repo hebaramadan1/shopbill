@@ -1,8 +1,8 @@
 import React from 'react';
-import { ShoppingCart, Package, BookOpen, BarChart3, Settings } from 'lucide-react';
+import { ShoppingCart, Package, BookOpen, BarChart3, Settings, PackageCheck, Calculator, Building2, Bot } from 'lucide-react';
 import { translations, SupportedLanguage } from '@shopbill/i18n';
 
-export type NavTab = 'pos' | 'products' | 'ledgers' | 'reports' | 'settings';
+export type NavTab = 'pos' | 'products' | 'ledgers' | 'reports' | 'settings' | 'stock-import' | 'gst-register' | 'bank-rec' | 'financial-chat';
 
 interface SidebarProps {
   activeTab: NavTab;
@@ -19,6 +19,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, lang }
     { id: 'ledgers' as NavTab, label: t.navKhata, icon: BookOpen, shortcut: 'F3' },
     { id: 'reports' as NavTab, label: t.navReports, icon: BarChart3, shortcut: 'F4' },
     { id: 'settings' as NavTab, label: 'Settings & Backup', icon: Settings, shortcut: 'F5' },
+    { id: 'stock-import' as NavTab, label: 'Stock Import', icon: PackageCheck, shortcut: 'F6' },
+    { id: 'gst-register' as NavTab, label: 'GST Register', icon: Calculator, shortcut: 'F7' },
+    { id: 'bank-rec' as NavTab, label: 'Bank Reconciliation', icon: Building2, shortcut: 'F8' },
+    { id: 'financial-chat' as NavTab, label: 'AI Financial Chat', icon: Bot, shortcut: 'F9' },
   ];
 
   return (
@@ -87,13 +91,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, lang }
           );
         })}
         <button
-          onClick={() => onSelectTab('settings')}
+          onClick={() => onSelectTab('financial-chat')}
           className={`flex flex-col items-center py-1 px-3 rounded-lg text-xs font-semibold ${
-            activeTab === 'settings' ? 'text-blue-600' : 'text-slate-500'
+            activeTab === 'financial-chat' ? 'text-blue-600' : 'text-slate-500'
           }`}
         >
-          <Settings className="w-5 h-5 mb-0.5" />
-          <span className="text-[11px]">Settings</span>
+          <Bot className="w-5 h-5 mb-0.5" />
+          <span className="text-[11px]">AI Chat</span>
         </button>
       </nav>
     </>
