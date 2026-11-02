@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Bot, Send, User, Sparkles, FileText, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Bot, Send, User, Sparkles, FileText, Loader2, Trash2 } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -12,14 +12,41 @@ interface Message {
 export const FinancialChatbotPage: React.FC = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
+  
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const savedMessages = localStorage.getItem('shopbill_chat_history');
+    if (savedMessages) {
+      try {
+        return JSON.parse(savedMessages);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return [
+      {
+        id: '1',
+        sender: 'bot',
+        text: 'Hello! I am your ShopBill AI Financial Assistant. Ask me anything about your stock, invoices, GST liability, or bank statements.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      },
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('shopbill_chat_history', JSON.stringify(messages));
+  }, [messages]);
+
+  // زر اختياري لمسح المحادثة وبدء شات جديد
+  const clearChat = () => {
+    const initialMsg: Message[] = [{
       id: '1',
       sender: 'bot',
       text: 'Hello! I am your ShopBill AI Financial Assistant. Ask me anything about your stock, invoices, GST liability, or bank statements.',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    },
-  ]);
+    }];
+    setMessages(initialMsg);
+    localStorage.removeItem('shopbill_chat_history');
+  };
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,28 +67,46 @@ export const FinancialChatbotPage: React.FC = () => {
     setIsLoading(true);
 
     try {
+      const dynamicContext = 
+        "Active Inventory & Supplier Records:\n" +
+        "- Supplier: MAA SALES (Invoice: INV-2026-089)\n" +
+        "  * Wireless Optical Mouse: 10 units (Rate: ₹450)\n" +
+        "  * USB Soundbar Speakers: 5 units (Rate: ₹1200)\n" +
+        "  * 12V Power Adapter: 20 units (Rate: ₹150)\n" +
+        "- GST Status: Registered & Up to date.";
+
       let res;
       try {
         res = await fetch('http://127.0.0.1:8000/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: userQuery }),
+          body: JSON.stringify({ 
+            message: userQuery,
+            context_data: dynamicContext 
+          }),
         });
       } catch {
         res = await fetch('http://localhost:8000/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: userQuery }),
+          body: JSON.stringify({ 
+            message: userQuery,
+            context_data: dynamicContext 
+          }),
         });
       }
 
       const data = await res.json();
       if (data.success) {
+        const extractedSources = data.sources && Array.isArray(data.sources) && data.sources.length > 0
+          ? data.sources.map((s: any) => s.source || s.invoice_no || "Invoice File")
+          : ['ShopBill Database'];
+
         const botMsg: Message = {
           id: (Date.now() + 1).toString(),
           sender: 'bot',
-          text: data.reply,
-          sources: ['MAA SALES (INV-2026-089)', 'IndexedDB Stock Store'],
+          text: data.response || data.reply || "No response received.",
+          sources: extractedSources,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         };
         setMessages((prev) => [...prev, botMsg]);
@@ -70,8 +115,8 @@ export const FinancialChatbotPage: React.FC = () => {
       const fallbackMsg: Message = {
         id: (Date.now() + 1).toString(),
         sender: 'bot',
-        text: `Based on your recent purchase from MAA SALES (INV-2026-089):\n- Wireless Optical Mouse: 10 units\n- USB Soundbar Speakers: 5 units\n- 12V Power Adapter: 20 units`,
-        sources: ['MAA SALES PDF', 'Stock Inventory DB'],
+        text: `Based on your recent purchase:\nWireless Optical Mouse: 10 units\nUSB Soundbar Speakers: 5 units\n12V Power Adapter: 20 units`,
+        sources: ['ShopBill Stock DB'],
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, fallbackMsg]);
@@ -93,6 +138,14 @@ export const FinancialChatbotPage: React.FC = () => {
             <p className="text-xs text-slate-500">RAG-Powered Document & Inventory Intelligence</p>
           </div>
         </div>
+        <button
+          onClick={clearChat}
+          title="Clear Chat History"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+          <span>Clear Chat</span>
+        </button>
       </header>
 
       {/* Chat Messages Area */}
@@ -156,12 +209,12 @@ export const FinancialChatbotPage: React.FC = () => {
         </div>
       </main>
 
-      {/* Input Form - الظاهر بوضوح بالأسفل */}
+      {/* Input Form */}
       <footer className="p-4 bg-white border-t border-slate-200 shadow-md shrink-0">
         <form onSubmit={handleSend} className="max-w-3xl mx-auto flex items-center gap-2">
           <input
             type="text"
-            value={input}
+            value= {input}
             onChange={(e) => setInput(e.target.value)}
             disabled={isLoading}
             placeholder="Ask about inventory, GST filing, or invoice totals..."

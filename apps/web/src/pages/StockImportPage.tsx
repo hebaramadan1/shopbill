@@ -77,15 +77,19 @@ export const StockImportPage: React.FC = () => {
     }
   };
 
-  const handleSaveToInventory = () => {
+  const handleSaveToInventory = async () => {
     if (!extractedData) return;
     
-    // حفظ الاصناف في قاعدة البيانات المحلية (IndexedDB / LocalStorage)
-    const existingStock = JSON.parse(localStorage.getItem('shopbill_inventory') || '[]');
-    const updatedStock = [...existingStock, ...extractedData.items];
-    localStorage.setItem('shopbill_inventory', JSON.stringify(updatedStock));
+    try {
+      // حفظ الأصناف في قاعدة البيانات المحلية (LocalStorage)
+      const existingStock = JSON.parse(localStorage.getItem('shopbill_inventory') || '[]');
+      const updatedStock = [...existingStock, ...extractedData.items];
+      localStorage.setItem('shopbill_inventory', JSON.stringify(updatedStock));
 
-    setIsSaved(true);
+      setIsSaved(true);
+    } catch (err) {
+      console.error('Failed to save to inventory:', err);
+    }
   };
 
   return (

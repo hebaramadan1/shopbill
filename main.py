@@ -3,11 +3,16 @@ import shutil
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from groq import Groq
+from dotenv import load_dotenv
 from parser import parse_invoice_pdf
 
-app = FastAPI(title="ShopBill AI Document Extraction Engine")
+# تحميل المتغيرات البيئية من ملف .env
+load_dotenv()
 
-# تفعيل CORS للاتصال مع Frontend (Vite)
+app = FastAPI(title="ShopBill AI Document Extraction & RAG Engine")
+
+# تفعيل CORS للاتصال مع Frontend (Vite / React)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,12 +24,16 @@ app.add_middleware(
 UPLOAD_DIR = "./temp_uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+# تهيئة عميل Groq باستخدام المفتاح البيئي
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
 class ChatRequest(BaseModel):
     message: str
+    context_data: str = ""  # بيانات الفواتير أو المخزون المرفقة للـ RAG
 
 @app.get("/")
 def read_root():
-    return {"status": "ShopBill AI Engine Running"}
+    return {"status": "ShopBill AI Engine is running successfully! 🚀"}
 
 @app.post("/api/extract-invoice")
 async def extract_invoice(file: UploadFile = File(...)):
@@ -47,16 +56,31 @@ async def extract_invoice(file: UploadFile = File(...)):
 
 @app.post("/api/chat")
 async def financial_chat(request: ChatRequest):
-    query = request.message.lower()
-    
-    if "mouse" in query or "stock" in query or "inventory" in query:
-        response_text = "Based on your latest imported stock from MAA SALES (INV-2026-089):\n- Wireless Optical Mouse: 10 units (Rate: ₹450)\n- USB Soundbar Speakers: 5 units (Rate: ₹1200)\n- 12V Power Adapter: 20 units (Rate: ₹150)"
-    elif "gst" in query or "tax" in query:
-        response_text = "Your calculated GST breakdown for current stock imports shows ₹1,485 Total Taxable Value under HSN 8471, 8518, and 8504."
-    else:
-        response_text = f"Received query: '{request.message}'. All financial and stock records are up to date."
+    try:
+        # إعداد نظام التوجيه للذكاء الاصطناعي (System Prompt) لضمان الدقة المالية ومنع الهلوسة
+        system_prompt = (
+            "You are an expert financial assistant for ShopBill. "
+            "Answer the user's question accurately using ONLY the provided financial context and stock records. "
+            "If the information is missing, politely state that you don't have enough data. "
+            "Always include source references (like invoice numbers or document names) when available."
+        )
 
-    return {"success": True, "reply": response_text}
+        user_prompt = f"Financial Context:\n{request.context_data}\n\nUser Question: {request.message}"
+
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            model="llama3-70b-8192",  # نموذج Groq السريع والقوي جداً
+            temperature=0.1,         # نسبة هلوسة منخفضة جداً للحسابات والبيانات المالية
+        )
+
+        reply_text = chat_completion.choices[0].message.content
+        return {"success": True, "reply": reply_text}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
